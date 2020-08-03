@@ -7,6 +7,7 @@ exports.createPages = async ({ graphql, actions }) => {
           edges {
             node {
               strapiId
+              slug
             }
           }
         }
@@ -14,6 +15,7 @@ exports.createPages = async ({ graphql, actions }) => {
           edges {
             node {
               strapiId
+              slug
             }
           }
         }
@@ -31,21 +33,47 @@ exports.createPages = async ({ graphql, actions }) => {
 
   articles.forEach((article, index) => {
     createPage({
-      path: `/article/${article.node.strapiId}`,
+      path: `/article/${article.node.slug}`,
       component: require.resolve("./src/templates/article.js"),
       context: {
-        id: article.node.strapiId,
+        slug: article.node.slug,
       },
     })
   })
 
   categories.forEach((category, index) => {
     createPage({
-      path: `/category/${category.node.strapiId}`,
+      path: `/category/${category.node.slug}`,
       component: require.resolve("./src/templates/category.js"),
       context: {
-        id: category.node.strapiId,
+        slug: category.node.slug,
       },
     })
   })
 }
+
+module.exports.onCreateNode = async ({ node, actions, createNodeId }) => {
+  const crypto = require(`crypto`)
+
+  if (node.internal.type === "StrapiArticle") {
+      const newNode = {
+          id: createNodeId(`StrapiArticleContent-${node.id}`),
+          parent: node.id,
+          children: [],
+          internal: {
+              content: node.content || " ",
+              type: "StrapiArticleContent",
+              mediaType: "text/markdown",
+              contentDigest: crypto
+                  .createHash("md5")
+                  .update(node.content || " ")
+                  .digest("hex"),
+          },
+      };
+      actions.createNode(newNode);
+      actions.createParentChildLink({
+          parent: node,
+          child: newNode,
+      });
+  }
+};
